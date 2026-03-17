@@ -19,10 +19,21 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = useCallback(async (username, password) => {
-    const { token, user: u } = await api.auth.login({ username, password });
-    localStorage.setItem('pcs_token', token);
-    setUser(u);
-    return u;
+    try {
+      // ── FIXED: We no longer destructure directly on the call ──
+      const data = await api.auth.login({ username, password });
+      
+      // If the request was successful, data will contain the token and user
+      if (data && data.token) {
+        localStorage.setItem('pcs_token', data.token);
+        setUser(data.user);
+        return data.user;
+      }
+    } catch (err) {
+      // ── FIXED: This prevents the 'Cannot destructure' crash ──
+      // It passes the real error message (like "Invalid credentials") to your LoginPage
+      throw new Error(err.message || 'Login failed');
+    }
   }, []);
 
   const logout = useCallback(() => {
@@ -32,8 +43,12 @@ export function AuthProvider({ children }) {
 
   // After password change, refresh user to clear must_change_pw
   const refreshUser = useCallback(async () => {
-    const u = await api.auth.me();
-    setUser(u);
+    try {
+      const u = await api.auth.me();
+      setUser(u);
+    } catch (err) {
+      console.error("Failed to refresh user:", err);
+    }
   }, []);
 
   const hasRole = useCallback((role) => {
