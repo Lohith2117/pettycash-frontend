@@ -24,8 +24,17 @@ async function request(method, path, body, isMultipart = false) {
     return;
   }
 
+  // Read the response body
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+  if (!res.ok) {
+    // If the server says 401, it means wrong password
+    if (res.status === 401) {
+      throw new Error("Invalid Username or Password");
+    }
+    throw new Error(data.error || `Error ${res.status}`);
+  }
+  
   return data;
 }
 
